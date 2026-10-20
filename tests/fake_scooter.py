@@ -35,6 +35,19 @@ class FakeScooter:
         self.ignore_writes = False
         self.written: list[bytes] = []
         self.notify: Callable[[object, bytearray], None] | None = None
+        self.asleep = False
+        self.connections = 0
+        self.disconnected_callback: Callable[[object], None] | None = None
+
+    def sleep(self) -> None:
+        """Power down: stop advertising and drop any link, as the real scooter does."""
+        self.asleep = True
+        if self.disconnected_callback is not None:
+            callback, self.disconnected_callback = self.disconnected_callback, None
+            callback(None)
+
+    def wake(self) -> None:
+        self.asleep = False
 
     def emit(self, cmd: int, data: bytes) -> None:
         packet = notification(cmd, data)
@@ -47,6 +60,8 @@ class FakeScooter:
         self.emit(0x92, bytes((0, 80, driving)) + speed_tenths.to_bytes(2, "little") + bytes(1))
 
     def receive(self, packet: bytes) -> None:
+        if self.asleep:
+            return
         self.written.append(packet)
         cmd = packet[3]
         if len(packet) == 7:

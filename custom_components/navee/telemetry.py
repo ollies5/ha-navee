@@ -87,6 +87,35 @@ class NaveeState:
     _current_sign: int | None = None
     _temperature_sign: int | None = None
 
+    # Live readings and per-connection facts. Everything else is kept as the last known value
+    # while the scooter sleeps, and replaced as soon as a new connection reads it again.
+    _SESSION_FIELDS = (
+        "battery_status",
+        "voltage_v",
+        "current_a",
+        "power_w",
+        "temperature_c",
+        "charging_state",
+        "speed_kmh",
+        "driving_status",
+        "driving_mode",
+        "warning_code",
+        "settings",
+        "_raw_voltage",
+        "_raw_current",
+        "_raw_temperature",
+        "_current_sign",
+        "_temperature_sign",
+    )
+
+    def new_session(self) -> None:
+        """Forget live readings and per-connection facts; keep last known values."""
+        for name in self._SESSION_FIELDS:
+            setattr(self, name, None)
+        self.settings_at = self.motion_at = self.warning_at = 0.0
+        self.motion_speed_raw = -1
+        self._voltage_batch = self._current_batch = -1
+
     @property
     def pid(self) -> str:
         return protocol.serial_pid(self.serial)

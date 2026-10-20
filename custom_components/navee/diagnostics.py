@@ -27,6 +27,8 @@ async def async_get_config_entry_diagnostics(
         "options": dict(entry.options),
         "model_id": coordinator.pid,
         "connected": coordinator.client.connected,
+        "awake": coordinator.awake,
+        "consecutive_connect_failures": coordinator._failures,
         "controls": sorted(coordinator.controls()),
         "state": async_redact_data(state, TO_REDACT),
         "vehicle_settings_hex": settings.hex() if settings else None,

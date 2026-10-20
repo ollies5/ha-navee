@@ -6,8 +6,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from homeassistant.components.sensor import (
+    RestoreSensor,
     SensorDeviceClass,
-    SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
@@ -35,6 +35,8 @@ PARALLEL_UPDATES = 0
 @dataclass(frozen=True, kw_only=True)
 class NaveeSensorDescription(SensorEntityDescription):
     value_fn: Callable[[NaveeState], float | int | str | None]
+    live: bool = False
+    """Unavailable while the scooter is unreachable. Other readings keep their last value."""
 
 
 SENSORS: tuple[NaveeSensorDescription, ...] = (
@@ -47,6 +49,7 @@ SENSORS: tuple[NaveeSensorDescription, ...] = (
     ),
     NaveeSensorDescription(
         key="voltage",
+        live=True,
         device_class=SensorDeviceClass.VOLTAGE,
         native_unit_of_measurement=UnitOfElectricPotential.VOLT,
         state_class=SensorStateClass.MEASUREMENT,
@@ -55,6 +58,7 @@ SENSORS: tuple[NaveeSensorDescription, ...] = (
     ),
     NaveeSensorDescription(
         key="current",
+        live=True,
         device_class=SensorDeviceClass.CURRENT,
         native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -63,6 +67,7 @@ SENSORS: tuple[NaveeSensorDescription, ...] = (
     ),
     NaveeSensorDescription(
         key="power",
+        live=True,
         device_class=SensorDeviceClass.POWER,
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
@@ -71,6 +76,7 @@ SENSORS: tuple[NaveeSensorDescription, ...] = (
     ),
     NaveeSensorDescription(
         key="battery_temperature",
+        live=True,
         device_class=SensorDeviceClass.TEMPERATURE,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         state_class=SensorStateClass.MEASUREMENT,
@@ -98,6 +104,7 @@ SENSORS: tuple[NaveeSensorDescription, ...] = (
     ),
     NaveeSensorDescription(
         key="speed",
+        live=True,
         device_class=SensorDeviceClass.SPEED,
         native_unit_of_measurement=UnitOfSpeed.KILOMETERS_PER_HOUR,
         state_class=SensorStateClass.MEASUREMENT,
@@ -154,6 +161,7 @@ SENSORS: tuple[NaveeSensorDescription, ...] = (
     ),
     NaveeSensorDescription(
         key="driving_mode",
+        live=True,
         device_class=SensorDeviceClass.ENUM,
         options=[*UT5_MAX_DRIVING_MODES.values()],
         value_fn=lambda s: (
@@ -162,17 +170,20 @@ SENSORS: tuple[NaveeSensorDescription, ...] = (
     ),
     NaveeSensorDescription(
         key="driving_mode_code",
+        live=True,
         entity_category=EntityCategory.DIAGNOSTIC,
         entity_registry_enabled_default=False,
         value_fn=lambda s: s.driving_mode,
     ),
     NaveeSensorDescription(
         key="warning_code",
+        live=True,
         entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda s: s.warning_code,
     ),
     NaveeSensorDescription(
         key="charging_state_code",
+        live=True,
         entity_category=EntityCategory.DIAGNOSTIC,
         entity_registry_enabled_default=False,
         value_fn=lambda s: s.charging_state,
@@ -198,13 +209,31 @@ async def async_setup_entry(
     async_add_entities(NaveeSensor(coordinator, description) for description in SENSORS)
 
 
-class NaveeSensor(NaveeEntity, SensorEntity):
+class NaveeSensor(NaveeEntity, RestoreSensor):
+    """Retained readings show their last known value while the scooter sleeps,
+    including after a Home Assistant restart."""
+
     entity_description: NaveeSensorDescription
 
     def __init__(self, coordinator, description: NaveeSensorDescription) -> None:
         super().__init__(coordinator, description.key)
         self.entity_description = description
+        self._restored: float | int | str | None = None
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        if not self.entity_description.live and (data := await self.async_get_last_sensor_data()):
+            self._restored = data.native_value
+
+    @property
+    def available(self) -> bool:
+        if self.entity_description.live:
+            return super().available and self.coordinator.awake
+        return super().available
 
     @property
     def native_value(self) -> float | int | str | None:
-        return self.entity_description.value_fn(self.coordinator.data)
+        value = self.entity_description.value_fn(self.coordinator.data)
+        if value is None and not self.entity_description.live:
+            return self._restored
+        return value

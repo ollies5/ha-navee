@@ -9,7 +9,7 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import UT5_MAX_PID
 from .coordinator import NaveeConfigEntry
-from .entity import NaveeEntity
+from .entity import NaveeLiveEntity
 
 PARALLEL_UPDATES = 1
 
@@ -24,7 +24,7 @@ async def async_setup_entry(
         async_add_entities([NaveeSyncClockButton(coordinator, "sync_clock")])
 
 
-class NaveeSyncClockButton(NaveeEntity, ButtonEntity):
+class NaveeSyncClockButton(NaveeLiveEntity, ButtonEntity):
     """Set the scooter clock to Home Assistant's local time (no readback exists)."""
 
     _attr_entity_category = EntityCategory.CONFIG

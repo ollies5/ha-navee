@@ -75,6 +75,27 @@ otherwise **Add integration → NAVEE Scooter**. Close the NAVEE app and Volt fi
 and paste the owner identity. Home Assistant connects, checks the identity and reads the serial
 before creating the entry.
 
+## When the scooter sleeps
+
+A powered-off NAVEE scooter goes to sleep and stops advertising, so no integration can hold a
+connection forever. This one treats sleep as normal:
+
+- **Last known values stay.** Battery %, odometer, range, trip, battery health, charge cycles,
+  firmware and the lock state keep their last value while the scooter sleeps, and are restored
+  after a Home Assistant restart. The **Connected** sensor shows whether the scooter is reachable.
+- **Live values and controls wait.** Voltage, current, power, temperature, speed, driving mode,
+  charging and warnings become unavailable, as do the setting switches/selects. Lock and unlock
+  calls fail with "The scooter is asleep or out of Bluetooth range".
+- **No dialling a sleeping scooter.** A connection is only attempted when the scooter has
+  advertised in the last 30 seconds, so a Bluetooth proxy's connection slot is not tied up
+  while it sleeps. When it wakes (power on, or plugging in the charger if it advertises then),
+  the next advertisement reconnects straight away.
+- **Backoff.** If the scooter advertises but connections keep failing (weak signal, a standby
+  mode that refuses connections), retries back off from 30 seconds up to 5 minutes.
+
+Still to confirm on real hardware: whether the scooter stays connectable while charging when
+switched off, and whether an open connection delays its automatic power-off.
+
 ## Options
 
 | Option | Default | Meaning |

@@ -44,6 +44,10 @@ class NaveeConnectionError(NaveeError):
     """The scooter could not be reached or the link dropped."""
 
 
+class NaveeAsleepError(NaveeConnectionError):
+    """The scooter is not advertising: asleep, powered off or out of range."""
+
+
 class NaveeAuthError(NaveeError):
     """The scooter rejected the owner identity."""
 
@@ -78,6 +82,7 @@ class NaveeClient:
         self._auth_event: asyncio.Event | None = None
         self._auth_error: NaveeError | None = None
         self._auth_rounds = 0
+        self._generation = 0
         self._write_response = True
         self._listeners: list[Callable[[], None]] = []
         self._disconnect_listeners: list[Callable[[], None]] = []
@@ -106,13 +111,16 @@ class NaveeClient:
                 return
             await self._disconnect()
             self._decoder.reset()
-            self.state = NaveeState()
+            self.state.new_session()
+            self._generation += 1
+            generation = self._generation
             try:
                 client = await establish_connection(
                     BleakClientWithServiceCache,
                     device,
                     device.name or device.address,
-                    disconnected_callback=self._on_disconnect,
+                    # A late callback from an earlier link must not end this one.
+                    disconnected_callback=lambda _c: self._on_disconnect(generation),
                     max_attempts=3,
                 )
             except (BleakError, TimeoutError) as err:
@@ -296,7 +304,20 @@ class NaveeClient:
                 if not future.done():
                     future.set_result(f)
 
-    def _on_disconnect(self, _client: object) -> None:
+    def _on_disconnect(self, generation: int) -> None:
+        if generation == self._generation:
+            self._link_ended(notify=True)
+
+    async def _disconnect(self) -> None:
+        """Intentional disconnect: listeners are not told and its late callback is ignored."""
+        client, self._client = self._client, None
+        self._generation += 1
+        self._link_ended(notify=False)
+        if client is not None:
+            with contextlib.suppress(BleakError, TimeoutError, EOFError):
+                await client.disconnect()
+
+    def _link_ended(self, notify: bool) -> None:
         was_authenticated = self._authenticated
         self._authenticated = False
         self._decoder.reset()
@@ -308,16 +329,9 @@ class NaveeClient:
         if self._auth_event is not None and not self._auth_event.is_set():
             self._auth_error = NaveeConnectionError("Disconnected during authentication")
             self._auth_event.set()
-        if was_authenticated:
+        if notify and was_authenticated:
             for listener in list(self._disconnect_listeners):
                 listener()
-
-    async def _disconnect(self) -> None:
-        client, self._client = self._client, None
-        self._authenticated = False
-        if client is not None:
-            with contextlib.suppress(BleakError, TimeoutError, EOFError):
-                await client.disconnect()
 
     def _require_connected(self) -> None:
         if not self.connected:

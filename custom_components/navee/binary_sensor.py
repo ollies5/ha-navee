@@ -47,7 +47,8 @@ BINARY_SENSORS: tuple[NaveeBinarySensorDescription, ...] = (
         key="connected",
         device_class=BinarySensorDeviceClass.CONNECTIVITY,
         entity_category=EntityCategory.DIAGNOSTIC,
-        value_fn=lambda c: c.client.connected,
+        # Reachable: connected now, or reached by the last poll when not keeping the link open.
+        value_fn=lambda c: c.awake,
         always_available=True,
     ),
 )
@@ -73,7 +74,10 @@ class NaveeBinarySensor(NaveeEntity, BinarySensorEntity):
 
     @property
     def available(self) -> bool:
-        return self.entity_description.always_available or super().available
+        if self.entity_description.always_available:
+            return True
+        # Charging, warnings and battery status are only known while the scooter is reachable.
+        return super().available and self.coordinator.awake
 
     @property
     def is_on(self) -> bool | None:
