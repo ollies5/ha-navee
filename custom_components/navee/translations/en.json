@@ -1,0 +1,234 @@
+{
+  "config": {
+    "flow_title": "{name}",
+    "step": {
+      "user": {
+        "description": "Choose the scooter to set up.",
+        "data": {
+          "address": "Scooter"
+        }
+      },
+      "identity": {
+        "title": "Owner identity for {name}",
+        "description": "Paste the owner identity: 12 hex characters, a Volt setup file, or a captured log line containing `Send authData: 55aa0030…`. See the README for how to capture it once from the NAVEE app. Close the NAVEE app (and Volt) first: the scooter accepts only one Bluetooth connection.",
+        "data": {
+          "identity": "Owner identity",
+          "shared_user": "Shared user (not the owner)"
+        },
+        "data_description": {
+          "identity": "Keep this private: it can unlock and control your scooter."
+        }
+      },
+      "reauth_confirm": {
+        "title": "Owner identity rejected",
+        "description": "The scooter rejected the saved identity (for example after re-binding it to another account). Paste the owner identity: 12 hex characters, a Volt setup file, or a captured log line containing `Send authData: 55aa0030…`. See the README for how to capture it once from the NAVEE app. Close the NAVEE app (and Volt) first: the scooter accepts only one Bluetooth connection.",
+        "data": {
+          "identity": "Owner identity",
+          "shared_user": "Shared user (not the owner)"
+        }
+      }
+    },
+    "error": {
+      "invalid_identity": "No owner identity found. Enter 12 hex characters, a setup file or a captured authData line.",
+      "ambiguous_identity": "The text contains conflicting identities or roles. Paste just one.",
+      "not_in_range": "The scooter is not in Bluetooth range of a connectable adapter or proxy.",
+      "auth_rejected": "The scooter rejected this owner identity.",
+      "wrong_scooter": "Connected, but this is not the configured scooter.",
+      "cannot_connect": "Could not connect. Close the NAVEE app and Volt, wake the scooter and try again."
+    },
+    "abort": {
+      "already_configured": "This scooter is already configured.",
+      "no_devices_found": "No NAVEE scooters found nearby.",
+      "reauth_successful": "Re-authentication was successful."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "poll_interval": "Poll interval",
+          "keep_connected": "Keep the Bluetooth connection open"
+        },
+        "data_description": {
+          "poll_interval": "How often to read status and battery.",
+          "keep_connected": "Gives live ride and charging updates, but blocks the NAVEE app and Volt from connecting while Home Assistant holds the link. Turn off to connect only for each poll and command."
+        }
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "charging": {
+        "name": "Charging"
+      },
+      "warning": {
+        "name": "Warning"
+      },
+      "battery_problem": {
+        "name": "Battery problem"
+      },
+      "connected": {
+        "name": "Connected"
+      }
+    },
+    "button": {
+      "sync_clock": {
+        "name": "Sync clock"
+      }
+    },
+    "lock": {
+      "lock": {
+        "name": "Lock"
+      }
+    },
+    "number": {
+      "kick_start_speed": {
+        "name": "Kick-start speed"
+      }
+    },
+    "select": {
+      "energy_recovery": {
+        "name": "Energy recovery",
+        "state": {
+          "off": "Off",
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High"
+        }
+      },
+      "display_units": {
+        "name": "Dashboard units",
+        "state": {
+          "imperial": "Miles / mph",
+          "metric": "Kilometers / km/h"
+        }
+      },
+      "maximum_speed": {
+        "name": "Maximum speed (Sport)",
+        "state": {
+          "25": "25 km/h",
+          "32": "32 km/h",
+          "40": "40 km/h",
+          "50": "50 km/h"
+        }
+      },
+      "charge_limit": {
+        "name": "Charge limit",
+        "state": {
+          "80": "80%",
+          "85": "85%",
+          "90": "90%",
+          "95": "95%",
+          "100": "100%"
+        }
+      },
+      "lock_duration": {
+        "name": "Lock duration",
+        "state": {
+          "6h": "6 hours",
+          "12h": "12 hours",
+          "24h": "24 hours"
+        }
+      }
+    },
+    "sensor": {
+      "battery_health": {
+        "name": "Battery health"
+      },
+      "battery_temperature": {
+        "name": "Battery temperature"
+      },
+      "charge_cycles": {
+        "name": "Charge cycles"
+      },
+      "rated_capacity": {
+        "name": "Rated capacity"
+      },
+      "remaining_range": {
+        "name": "Remaining range"
+      },
+      "trip_distance": {
+        "name": "Trip distance"
+      },
+      "trip_time": {
+        "name": "Trip time"
+      },
+      "trip_max_speed": {
+        "name": "Trip maximum speed"
+      },
+      "trip_average_speed": {
+        "name": "Trip average speed"
+      },
+      "odometer": {
+        "name": "Odometer"
+      },
+      "driving_mode": {
+        "name": "Driving mode",
+        "state": {
+          "eco": "Eco",
+          "sport": "Sport",
+          "walk": "Walk"
+        }
+      },
+      "driving_mode_code": {
+        "name": "Driving mode code"
+      },
+      "warning_code": {
+        "name": "Warning code"
+      },
+      "charging_state_code": {
+        "name": "Charging state code"
+      },
+      "meter_firmware": {
+        "name": "Meter firmware"
+      },
+      "controller_firmware": {
+        "name": "Controller firmware"
+      },
+      "battery_firmware": {
+        "name": "Battery firmware"
+      },
+      "screen_firmware": {
+        "name": "Screen firmware"
+      },
+      "uwb_firmware": {
+        "name": "Proximity firmware"
+      }
+    },
+    "switch": {
+      "cruise_control": {
+        "name": "Cruise control"
+      },
+      "tail_light": {
+        "name": "Tail light"
+      },
+      "auto_lights": {
+        "name": "Automatic lights"
+      },
+      "traction_control": {
+        "name": "Traction control"
+      },
+      "turn_signal_sound": {
+        "name": "Turn signal sound"
+      },
+      "low_battery_mode": {
+        "name": "Low battery mode"
+      },
+      "walk_assist": {
+        "name": "Walk assist"
+      },
+      "power_assist": {
+        "name": "Power assist"
+      },
+      "hill_descent_control": {
+        "name": "Hill descent control"
+      },
+      "line_lights": {
+        "name": "Line lights"
+      },
+      "star_lights": {
+        "name": "Star lights"
+      }
+    }
+  }
+}

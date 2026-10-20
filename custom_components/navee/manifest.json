@@ -1,0 +1,19 @@
+{
+  "domain": "navee",
+  "name": "NAVEE Scooter",
+  "bluetooth": [
+    { "service_uuid": "0000d0ff-3c17-d293-8e48-14fe2e4da212", "connectable": true },
+    { "local_name": "NAVEE*", "connectable": true },
+    { "local_name": "Navee*", "connectable": true },
+    { "local_name": "navee*", "connectable": true }
+  ],
+  "codeowners": [],
+  "config_flow": true,
+  "dependencies": ["bluetooth_adapters"],
+  "documentation": "https://github.com/ollies5/ha-navee",
+  "integration_type": "device",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/ollies5/ha-navee/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}
