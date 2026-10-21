@@ -15,5 +15,5 @@
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/ollies5/ha-navee/issues",
   "requirements": [],
-  "version": "0.1.1"
+  "version": "0.1.2"
 }
