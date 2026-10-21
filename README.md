@@ -1,16 +1,15 @@
 # NAVEE Scooter for Home Assistant
 
-![Status: untested on hardware](https://img.shields.io/badge/status-untested%20on%20hardware-orange)
+![Tested on: NAVEE UT5 MAX](https://img.shields.io/badge/tested%20on-NAVEE%20UT5%20MAX-brightgreen)
 
 A Home Assistant integration that talks to **NAVEE scooters directly over Bluetooth**, with no
 NAVEE account or cloud. It is a Python port of the Bluetooth layer of
 [Volt](https://github.com/JJRicks/navee-offline) (the offline Android companion): the same
 framing, owner handshake, telemetry decoding and safety rules for controls.
 
-> [!WARNING]
-> **Untested on real hardware.** Everything passes automated tests against Volt's protocol
-> vectors and a simulated scooter, but it has not yet been run against a physical scooter from
-> Home Assistant. Releases are marked as pre-releases until it has.
+> [!TIP]
+> **Tested on a US NAVEE UT5 MAX** through an ESP32 Bluetooth proxy: automatic discovery and
+> setup, readings, the lock and settings all work. Other NAVEE models are untested.
 
 > [!NOTE]
 > Independent community project, not affiliated with or endorsed by NAVEE.
@@ -19,7 +18,7 @@ framing, owner handshake, telemetry decoding and safety rules for controls.
 
 | Scooter | Support |
 | :-- | :-- |
-| **NAVEE UT5 MAX** (US, model 2538) | Full: all readings, the lock and every control listed below. Volt verified each control on this model; this integration has not yet been run on one. |
+| **NAVEE UT5 MAX** (US, model 2538) | **Tested.** All readings, the lock and every control listed below. |
 | Other NAVEE scooters | Readings and the lock only. **May work, but untested.** They use the same Bluetooth service and owner login, but their settings are encoded differently per model, so no other controls are offered. |
 | NAVEE e-bikes and other non-scooter products | Not supported: they use a different Bluetooth transport. |
 
@@ -205,8 +204,7 @@ serial before saving. Close NAVEE first, because the scooter accepts one connect
 [![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=ollies5&repository=ha-navee&category=integration)
 
 The button opens this repository in HACS on your Home Assistant. Then download **NAVEE Scooter**
-and restart Home Assistant. Releases are pre-releases while the integration is untested on
-hardware, so turn on beta versions when downloading to see them. Without the button: HACS → ⋮ → Custom repositories → add this
+and restart Home Assistant. Without the button: HACS → ⋮ → Custom repositories → add this
 repository's URL as an *Integration*.
 
 **Manual:** copy `custom_components/navee` into your Home Assistant `config/custom_components/`
@@ -233,13 +231,19 @@ connection forever. This one treats sleep as normal:
   calls fail with "The scooter is asleep or out of Bluetooth range".
 - **No dialling a sleeping scooter.** A connection is only attempted when the scooter has
   advertised in the last 30 seconds, so a Bluetooth proxy's connection slot is not tied up
-  while it sleeps. When it wakes (power on, or plugging in the charger if it advertises then),
-  the next advertisement reconnects straight away.
+  while it sleeps. When it is switched on, the next advertisement reconnects straight away.
 - **Backoff.** If the scooter advertises but connections keep failing (weak signal, a standby
   mode that refuses connections), retries back off from 30 seconds up to 5 minutes.
 
-Still to confirm on real hardware: whether the scooter stays connectable while charging when
-switched off, and whether an open connection delays its automatic power-off.
+> [!IMPORTANT]
+> **Charging is only visible while the scooter is switched on.** On the UT5 MAX, switching the
+> scooter off while it charges ends the Bluetooth connection, so battery % and charging state
+> stop updating until it is switched on again. Charging with the scooter on reports normally.
+> Automations that wait for the battery to reach a level need the scooter left on while it
+> charges, and should use a timeout so a charger is never left on indefinitely.
+
+Not yet checked: whether an open connection ("Keep the Bluetooth connection open") stops the
+scooter's automatic power-off while it is on and idle.
 
 ## Options
 
@@ -281,8 +285,8 @@ scooter (`tests/fake_scooter.py`) that runs the real challenge handshake.
 
 ## Limitations
 
-- Not yet run against a physical scooter from Home Assistant; the protocol port is tested against
-  Volt's vectors and a simulator. Please report results.
+- Tested on one scooter (a US UT5 MAX) through an ESP32 Bluetooth proxy. Reports from other
+  models and adapters are welcome.
 - Model-specific controls for models other than the UT5 MAX are not ported (Volt maps many of
   them from the official app, but they are untested there too).
 - Encrypted (flag 1) frames are not supported, matching Volt.
