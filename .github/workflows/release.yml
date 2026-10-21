@@ -1,0 +1,58 @@
+name: release
+
+# Push a tag such as v0.2.0 to publish a release HACS can install.
+# A tag with a suffix (v0.2.0-beta.1) becomes a pre-release marked untested on hardware.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the tag matches manifest.json
+        id: version
+        run: |
+          manifest=$(python3 -c "import json; print(json.load(open('custom_components/navee/manifest.json'))['version'])")
+          tag="${GITHUB_REF_NAME#v}"
+          if [ "$tag" != "$manifest" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match manifest.json version $manifest"
+            exit 1
+          fi
+          if [[ "$tag" == *-* ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+            echo "name=$GITHUB_REF_NAME (untested on hardware)" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+            echo "name=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Write release notes
+        run: |
+          if [ "${{ steps.version.outputs.prerelease }}" = "true" ]; then
+            cat > notes.md <<'NOTES'
+          > [!WARNING]
+          > **Untested on real hardware.** This release passes its automated tests (protocol
+          > vectors from Volt and a simulated scooter) but has not yet been run against a physical
+          > NAVEE scooter from Home Assistant. Expect rough edges and please report what happens,
+          > with debug logs for `custom_components.navee`.
+
+          HACS lists pre-releases only when beta versions are shown for this repository
+          (an option when downloading it in HACS).
+          NOTES
+          else
+            : > notes.md
+          fi
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ steps.version.outputs.name }}
+          prerelease: ${{ steps.version.outputs.prerelease }}
+          body_path: notes.md
+          generate_release_notes: true

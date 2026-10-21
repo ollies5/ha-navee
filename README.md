@@ -1,14 +1,31 @@
 # NAVEE Scooter for Home Assistant
 
+![Status: untested on hardware](https://img.shields.io/badge/status-untested%20on%20hardware-orange)
+
 A Home Assistant integration that talks to **NAVEE scooters directly over Bluetooth**, with no
 NAVEE account or cloud. It is a Python port of the Bluetooth layer of
 [Volt](https://github.com/JJRicks/navee-offline) (the offline Android companion): the same
 framing, owner handshake, telemetry decoding and safety rules for controls.
 
+> [!WARNING]
+> **Untested on real hardware.** Everything passes automated tests against Volt's protocol
+> vectors and a simulated scooter, but it has not yet been run against a physical scooter from
+> Home Assistant. Releases are marked as pre-releases until it has.
+
 > [!NOTE]
-> Independent community project, not affiliated with or endorsed by NAVEE. Controls are only
-> offered where Volt has verified them on a parked **US UT5 MAX (model 2538)**. Other NAVEE
-> models get readings and the lock only.
+> Independent community project, not affiliated with or endorsed by NAVEE.
+
+## Compatible scooters
+
+| Scooter | Support |
+| :-- | :-- |
+| **NAVEE UT5 MAX** (US, model 2538) | Full: all readings, the lock and every control listed below. Volt verified each control on this model; this integration has not yet been run on one. |
+| Other NAVEE scooters | Readings and the lock only. **May work, but untested.** They use the same Bluetooth service and owner login, but their settings are encoded differently per model, so no other controls are offered. |
+| NAVEE e-bikes and other non-scooter products | Not supported: they use a different Bluetooth transport. |
+
+The model is read from the scooter's serial number when it first connects, and shown on the
+device page in Home Assistant. If you try another model, please open an issue with its model
+number and what worked.
 
 ## What you get
 
@@ -69,7 +86,8 @@ The setup flow accepts any of:
 [![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=ollies5&repository=ha-navee&category=integration)
 
 The button opens this repository in HACS on your Home Assistant. Then download **NAVEE Scooter**
-and restart Home Assistant. Without the button: HACS → ⋮ → Custom repositories → add this
+and restart Home Assistant. Releases are pre-releases while the integration is untested on
+hardware, so turn on beta versions when downloading to see them. Without the button: HACS → ⋮ → Custom repositories → add this
 repository's URL as an *Integration*.
 
 **Manual:** copy `custom_components/navee` into your Home Assistant `config/custom_components/`
