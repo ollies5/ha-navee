@@ -2,6 +2,12 @@ This integration is an independent community project. It is not affiliated with,
 sponsored by, or endorsed by NAVEE or its app vendor. NAVEE names identify
 compatible hardware only; no trademark rights are granted.
 
+BRAND ICON
+
+custom_components/navee/brand/icon.png and icon@2x.png show the NAVEE wordmark,
+a trademark of its owner, used only to identify the compatible hardware. The
+icon is not covered by this project's MIT licence.
+
 PROTOCOL PORT
 
 The Bluetooth protocol, telemetry decoding, control catalogue and owner identity
