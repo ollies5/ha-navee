@@ -64,16 +64,24 @@ The setup flow accepts any of:
 
 ## Installation
 
-**HACS (custom repository):** HACS → ⋮ → Custom repositories → add this repository's URL as an
-*Integration* → install **NAVEE Scooter** → restart Home Assistant.
+**HACS:**
+
+[![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=ollies5&repository=ha-navee&category=integration)
+
+The button opens this repository in HACS on your Home Assistant. Then download **NAVEE Scooter**
+and restart Home Assistant. Without the button: HACS → ⋮ → Custom repositories → add this
+repository's URL as an *Integration*.
 
 **Manual:** copy `custom_components/navee` into your Home Assistant `config/custom_components/`
 directory and restart.
 
 Then: **Settings → Devices & services**. A nearby scooter is usually discovered automatically;
-otherwise **Add integration → NAVEE Scooter**. Close the NAVEE app and Volt first, wake the scooter,
-and paste the owner identity. Home Assistant connects, checks the identity and reads the serial
-before creating the entry.
+otherwise add it here:
+
+[![Open your Home Assistant instance and start setting up NAVEE Scooter.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=navee)
+
+Close the NAVEE app and Volt first, wake the scooter, and paste the owner identity. Home Assistant
+connects, checks the identity and reads the serial before creating the entry.
 
 ## When the scooter sleeps
 
