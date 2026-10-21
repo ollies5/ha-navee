@@ -1,11 +1,14 @@
 name: release
 
-# Push a tag such as v0.2.0 to publish a release HACS can install.
-# A tag with a suffix (v0.2.0-beta.1) becomes a pre-release marked untested on hardware.
+# Publish a release HACS can install, either by pushing a tag such as v0.2.0, or by running
+# this workflow manually on main (Actions -> release -> Run workflow), which tags main with the
+# version in manifest.json. A version with a suffix (0.2.0-beta.1) becomes a pre-release
+# marked untested on hardware.
 
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -16,21 +19,35 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check the tag matches manifest.json
+      - name: Work out the tag from manifest.json
         id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          manifest=$(python3 -c "import json; print(json.load(open('custom_components/navee/manifest.json'))['version'])")
-          tag="${GITHUB_REF_NAME#v}"
-          if [ "$tag" != "$manifest" ]; then
-            echo "::error::Tag $GITHUB_REF_NAME does not match manifest.json version $manifest"
-            exit 1
+          version=$(python3 -c "import json; print(json.load(open('custom_components/navee/manifest.json'))['version'])")
+          tag="v$version"
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            if [ "$GITHUB_REF_NAME" != "$tag" ]; then
+              echo "::error::Tag $GITHUB_REF_NAME does not match manifest.json version $version"
+              exit 1
+            fi
+          else
+            if [ "$GITHUB_REF_NAME" != "main" ]; then
+              echo "::error::Run releases from main"
+              exit 1
+            fi
+            if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$tag" >/dev/null 2>&1; then
+              echo "::error::$tag already exists; bump the version in manifest.json first"
+              exit 1
+            fi
           fi
-          if [[ "$tag" == *-* ]]; then
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          if [[ "$version" == *-* ]]; then
             echo "prerelease=true" >> "$GITHUB_OUTPUT"
-            echo "name=$GITHUB_REF_NAME (untested on hardware)" >> "$GITHUB_OUTPUT"
+            echo "name=$tag (untested on hardware)" >> "$GITHUB_OUTPUT"
           else
             echo "prerelease=false" >> "$GITHUB_OUTPUT"
-            echo "name=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+            echo "name=$tag" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Write release notes
@@ -52,6 +69,8 @@ jobs:
 
       - uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
           name: ${{ steps.version.outputs.name }}
           prerelease: ${{ steps.version.outputs.prerelease }}
           body_path: notes.md
