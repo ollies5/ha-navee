@@ -61,23 +61,142 @@ Home Assistant rather than silently showing the new value.
 - An already activated, owner-bound NAVEE scooter.
 - The scooter's **owner identity** (12 hex characters), captured once from the NAVEE app.
 
-### Getting the owner identity
+See [Getting the owner identity](#getting-the-owner-identity) below before you start.
 
-The scooter authenticates its owner with a 6-byte identity tied to your NAVEE account. Capture it
-once using one of Volt's helpers (see Volt's
-[getting-started guide](https://github.com/JJRicks/navee-offline/blob/main/docs/getting-started.md)):
-the Chrome/USB [setup website](https://pairscooter.jjricks.com/), Shizuku on the phone, or the
-computer ADB helper. You never enter a NAVEE or Google password.
+## Getting the owner identity
 
-The setup flow accepts any of:
+The scooter only accepts commands from its owner. When the NAVEE app connects, it logs in to the
+scooter with a **6-byte owner identity** (12 hex characters) tied to your NAVEE account. This is
+not your NAVEE password or a cloud token. You normally capture it **once**, from your own phone,
+while the NAVEE app connects to your scooter.
 
-- the 12 hex characters, e.g. `8600123456AB`;
-- the contents of the private setup file the capture helper saves (`identity: …`, `role: …`);
-- a captured log line containing `Send authData: 55aa0030…` (the checksum is verified).
+All three methods below work the same way. They briefly switch on the NAVEE app's own debug
+logging and restart it. You connect to the scooter in NAVEE, they pick out the single
+`Send authData:` line it logs, and then they put the logging setting back. You never type a NAVEE
+or Google password anywhere.
+
+**Before you start (every method):**
+
+- The NAVEE app (`com.navee.ucaret`) is installed, signed in to **your** account, and can connect
+  to your scooter.
+- The scooter is powered on, parked and near the phone. Close Volt and any other scooter app.
+- Enable **Developer options** on the phone (Settings → About phone → tap *Build number* seven
+  times), then turn on **USB debugging**. Use a USB *data* cable, not a charge-only one.
 
 > [!WARNING]
-> The identity can unlock and control your scooter. Treat it like a key. Home Assistant stores
-> it in its config entry storage; diagnostics downloads redact it.
+> The identity can unlock and control your scooter. Treat it like a key: don't post it, the log
+> line or the setup file in issues or chats. Home Assistant keeps it in its config entry storage,
+> and the integration's diagnostics download redacts it. Capture only your own account's
+> identity for your own scooter.
+
+### Option 1: Volt's setup website (easiest, testing preview)
+
+No software to install. You need desktop Chrome or Edge.
+
+1. Open **[pairscooter.jjricks.com](https://pairscooter.jjricks.com/)** and connect the phone by
+   USB.
+2. Follow the page: select the phone, approve Android's USB debugging prompt (leave *Always allow*
+   unticked), then allow the temporary NAVEE logging and restart.
+3. Connect to the scooter in NAVEE when asked. The page restores NAVEE's logging and closes it.
+4. Download the computer backup file. This is a small JSON file containing `owner_identity`.
+5. Open the file in a text editor and paste its contents into Home Assistant.
+
+The page works in your browser, and the identity is not uploaded. If USB disconnects mid-way,
+return to the same page and use **Recover cleanup**. Details are in
+[Volt's web helper notes](https://github.com/JJRicks/navee-offline/blob/main/setup/web/README.md).
+
+### Option 2: Volt's computer helper (the established route)
+
+You need [Android Platform-Tools](https://developer.android.com/tools/releases/platform-tools)
+(`adb`) and Python 3. Get Volt's source (download the ZIP from
+[JJRicks/navee-offline](https://github.com/JJRicks/navee-offline)), and from its folder run:
+
+```sh
+python3 setup/capture-owner.py
+```
+
+Connect to the scooter in NAVEE when prompted (it waits up to 90 seconds). The helper checks the
+captured frame, closes NAVEE, restores its logging setting, and saves `navee-owner-setup.json`.
+Paste the contents of that file into Home Assistant. With several phones attached, add
+`-s PHONE_SERIAL` (from `adb devices`). Full instructions:
+[Volt's SETUP.txt](https://github.com/JJRicks/navee-offline/blob/main/SETUP.txt).
+
+### Option 3: by hand with `adb`
+
+This does exactly what the helpers do, step by step. Run these on a computer with `adb`
+installed and the phone connected.
+
+1. **Check the phone is connected.** It should be listed as `device`:
+   ```sh
+   adb devices
+   ```
+2. **Note NAVEE's current log setting.** It's usually blank; you restore it in step 6:
+   ```sh
+   adb shell getprop log.tag.com.navee.ucaret
+   ```
+3. **Turn on NAVEE's debug logging and restart it.** NAVEE only reads this setting at startup,
+   which is why it has to be restarted:
+   ```sh
+   adb shell setprop log.tag.com.navee.ucaret VERBOSE
+   adb shell am force-stop com.navee.ucaret
+   ```
+4. **Open NAVEE on the phone and connect to your scooter.** Wait until it shows the scooter as
+   connected.
+5. **Read the login line.** Only NAVEE's own messages containing `Send authData:` are shown:
+   ```sh
+   adb logcat -d -s "com.navee.ucaret:D" "*:S" -e "Send authData:"
+   ```
+   You should see a line ending like this (your bytes will differ):
+   ```
+   ... D com.navee.ucaret: Send authData: [55 aa 00 30 09 01 00 86 00 12 34 56 78 00 d3 fe fd]
+   ```
+   Nothing printed? Disconnect and reconnect in NAVEE, then run the command again.
+6. **Clean up.** Close NAVEE again, then put the log setting back. Use the value from step 2; if it
+   was blank, use the second form:
+   ```sh
+   adb shell am force-stop com.navee.ucaret
+   adb shell setprop log.tag.com.navee.ucaret PREVIOUS_VALUE
+   adb shell "setprop log.tag.com.navee.ucaret ''"   # if step 2 printed nothing
+   adb shell getprop log.tag.com.navee.ucaret         # check it matches step 2
+   ```
+7. **Paste the whole `Send authData:` line** into Home Assistant. The integration verifies the
+   frame's checksum and extracts the identity.
+
+**Reading the frame yourself** (optional). The line holds 17 bytes:
+`55 aa 00 30 09` (header and login command), then a key-index byte (`01` here), then the **role** (`00` =
+owner, `01` = shared user), then the **six identity bytes** (`86 00 12 34 56 78` in the example,
+i.e. `860012345678`), then `00`, a checksum and `fe fd`. You can paste just the 12 identity
+characters instead of the line; tick *Shared user* in the setup form if the role byte was `01`.
+
+### Entering it in Home Assistant
+
+The setup form accepts any of:
+
+- the 12 hex characters, e.g. `860012345678`;
+- the contents of a setup file from the website or computer helper (`owner_identity`, `role`);
+- a captured `Send authData:` line or a whole filtered log (only checksum-valid login frames are
+  used, and conflicting identities are rejected).
+
+Home Assistant then connects to the scooter, checks that it accepts the identity, and reads its
+serial before saving. Close NAVEE first, because the scooter accepts one connection at a time.
+
+### Afterwards
+
+- Turn off **USB debugging** (and revoke the computer under *Revoke USB debugging
+  authorizations*) once you're done.
+- Keep the setup file somewhere private, or delete it. You only need it again to set up a new
+  Home Assistant instance.
+- If the scooter ever rejects the identity (for example after it is re-bound to another NAVEE
+  account), Home Assistant asks you to enter a new one. Capture it again the same way.
+
+### Troubleshooting
+
+- **`adb devices` shows `unauthorized`:** unlock the phone and accept the USB debugging prompt.
+  Nothing listed at all usually means a charge-only cable.
+- **No `Send authData:` line:** make sure NAVEE actually connected to the scooter *after* the
+  restart in step 3. A future NAVEE update could also stop logging this line; the helpers would
+  then fail the same way.
+- **Work profile or secondary user:** the website refuses these; use the main Android user.
 
 ## Installation
 
